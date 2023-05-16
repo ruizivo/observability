@@ -1,0 +1,92 @@
+version: '3.8'
+
+networks:
+  monit:
+
+services:      
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    ports:
+      - "9000:9000"
+      - "8123:8123"
+    networks:
+      - monit
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    # volumes:
+      # - ./configs/clickhouse/clickhouse-config.xml:/etc/clickhouse-server/config.xml
+      # - ./configs/clickhouse/clickhouse-users.xml:/etc/clickhouse-server/users.xml
+      # - ./configs/clickhouse/clickhouse-cluster.xml:/etc/clickhouse-server/config.d/cluster.xml
+      # - ./configs/clickhouse/clickhouse-storage.xml:/etc/clickhouse-server/config.d/storage.xml
+      # - ./data/clickhouse/:/var/lib/clickhouse/
+      # - ./configs/init-db.sql/:/docker-entrypoint-initdb.d/init-db.sql
+      
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      # - ./configs/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./configs/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./configs/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    environment:
+      GF_INSTALL_PLUGINS: grafana-clickhouse-datasource,vertamedia-clickhouse-datasource,volkovlabs-form-panel,marcusolsson-dynamictext-panel
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: vertamedia-clickhouse-datasource
+      GF_PANELS_DISABLE_SANITIZE_HTML: true
+    ports:
+      - "3001:3000"
+    depends_on:
+      - clickhouse
+    networks:
+      - monit
+    # volumes:
+     # - ./data/grafana:/var/lib/grafana
+
+  opentelemetry-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    # container_name: otel
+    command:
+      - "--config=/etc/otel-collector-config.yaml"
+      - "--set=service.telemetry.logs.level=INFO"
+    volumes:
+      - ./configs/opentelemetry/config-otel.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"   # otlp receiver
+      - "1888:1888"   # pprof extension
+      - "13133:13133" # health_check extension
+      - "55679:55679" # zpages extension
+      - "24224:24224" # fluentforwarder
+      - "24224:24224/udp" # fluentforwarder
+      - "9464"          # Prometheus exporter
+      - "8888"          # metrics endpoint
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - monit
+
+
+  prometheus:
+    image: prom/prometheus:latest
+    # container_name: prometheus
+    command:
+      - --web.console.templates=/etc/prometheus/consoles
+      - --web.console.libraries=/etc/prometheus/console_libraries
+      - --storage.tsdb.retention.time=1h
+      - --config.file=/etc/prometheus/prometheus-config.yaml
+      # - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+      # - --web.route-prefix=/
+      # - --enable-feature=exemplar-storage
+    volumes:
+     - ./configs/prometheus/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
+     - ./data/prometheus:/prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    ports:
+      - "9090:9090"
+    networks:
+      - monit
