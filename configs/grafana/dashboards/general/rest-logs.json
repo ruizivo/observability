@@ -956,88 +956,8 @@
     },
     {
       "datasource": {
-        "type": "datasource",
-        "uid": "-- Dashboard --"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "filterable": false,
-            "inspect": false,
-            "minWidth": 50
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Error (count)"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 100
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "resource"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 340
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "endpoint"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 313
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "exception"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 817
-              }
-            ]
-          }
-        ]
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-traces"
       },
       "gridPos": {
         "h": 6,
@@ -1045,63 +965,83 @@
         "x": 12,
         "y": 11
       },
-      "id": 24,
+      "id": 27,
       "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "enablePagination": false,
-          "fields": "",
-          "reducer": [
-            "count"
-          ],
-          "show": false
+        "content": "\n  <div class=\"row\">\n    <div class=\"col\"><button onclick=\"sendData()\">Copiar cUrl</button></div>\n    <div class=\"col\">{{{@root.Timestamp}}}</div>\n    <div class=\"col\">{{{@root.Request.method}}}</div>\n    <div class=\"col\">{{{@root.Error.error}}}</div>\n    <div class=\"col\">{{{@root.Error.status}}}</div>\n    <div class=\"col\"><a style=\"color: rgb(110, 159, 255);\" target=\"_blank\" \n    href=\"/d/8klBUGfVk/otel-traces?serviceName={{variable 'serviceName'}}&var-trace_id={{@root.TraceId}}\">{{{@root.TraceId}}}</a></div>\n    <div class=\"col\" style=\"margin-left:10px;text-overflow: ellipsis;white-space: nowrap;overflow: hidden;\">{{{@root.Error.message}}}</div>\n  </div>",
+        "defaultContent": "The query didn't return any results.",
+        "editor": {
+          "format": "none",
+          "height": 311,
+          "language": "html"
         },
-        "frameIndex": 0,
-        "showHeader": true,
-        "sortBy": []
+        "editors": [
+          "helpers",
+          "styles"
+        ],
+        "everyRow": true,
+        "helpers": "\r\n\r\nsendData = () => {\r\n  var body = JSON.parse(data.Body);\r\n  var queryString = body.Request.queryString != null ? \"?\" + body.Request.queryString : \"\";\r\n  var location = \"--location '\" + body.Request.url + queryString + \"' \\\\\\n\";\r\n  var headers = \"\";\r\n  Object.entries(body.Request.header).forEach(entry => {\r\n    headers += \"--header '\" + entry[0] + \":\" + entry[1] + \"'\\\\\\n\";\r\n  });\r\n  var dataRaw = \"--data-raw '\" + JSON.stringify(body.Request.body) + \"'\";\r\n  var cUrl = \"curl \" + location + headers + dataRaw;\r\n  navigator.clipboard.writeText(cUrl);\r\n  alert(\"Copiado para o clipboard\");\r\n\r\n\r\n  //console.log(body.Request);\r\n  // fetch(\"http://localhost:8081\" + body.Request.endpoint, {\r\n  //   method: body.Request.method,\r\n  //   headers: body.Request.header,\r\n  //   body: JSON.stringify(body.Request.body)\r\n  // })\r\n  //.then(response => response.json())\r\n  //.then(response => console.log(JSON.stringify(response)))\r\n}\r\n\r\n",
+        "styles": "\r\n.row {\r\n  display: flex; \r\n  width: 100%;\r\n}\r\n\r\n.col {\r\n  flex: 1;       \r\n}"
       },
-      "pluginVersion": "9.5.2",
       "targets": [
         {
-          "datasource": {
-            "type": "datasource",
-            "uid": "-- Dashboard --"
+          "builderOptions": {
+            "fields": [
+              "Body",
+              "TraceId",
+              "Timestamp"
+            ],
+            "filters": [
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "key": "Timestamp",
+                "operator": "WITH IN DASHBOARD TIME RANGE",
+                "restrictToFields": [
+                  {
+                    "label": "Timestamp",
+                    "name": "Timestamp",
+                    "picklistValues": [],
+                    "type": "DateTime64(9)"
+                  }
+                ],
+                "type": "datetime"
+              },
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "key": "Body",
+                "operator": "LIKE",
+                "type": "String",
+                "value": "{\"Request\":"
+              }
+            ],
+            "limit": 100,
+            "mode": "list",
+            "orderBy": [
+              {
+                "dir": "DESC",
+                "name": "Timestamp"
+              }
+            ],
+            "table": "logs"
           },
-          "panelId": 11,
-          "refId": "A"
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-traces"
+          },
+          "format": 2,
+          "queryType": "builder",
+          "rawSql": "SELECT Body, TraceId, Timestamp FROM \"logs\" WHERE   ( Timestamp  >= $__fromTime AND Timestamp <= $__toTime ) AND ( Body LIKE '%{\"Request\":%' ) ORDER BY Timestamp DESC LIMIT 100",
+          "refId": "A",
+          "selectedFormat": 2
         }
       ],
-      "title": "Erros por endpoint",
+      "title": "Panel Title",
       "transformations": [
         {
           "id": "extractFields",
           "options": {
-            "format": "json",
-            "replace": false,
             "source": "Body"
-          }
-        },
-        {
-          "id": "extractFields",
-          "options": {
-            "format": "json",
-            "replace": false,
-            "source": "Request"
-          }
-        },
-        {
-          "id": "extractFields",
-          "options": {
-            "replace": false,
-            "source": "Error"
-          }
-        },
-        {
-          "id": "extractFields",
-          "options": {
-            "replace": false,
-            "source": "Exception"
           }
         },
         {
@@ -1109,119 +1049,16 @@
           "options": {
             "conversions": [
               {
-                "destinationType": "number",
-                "targetField": "status"
+                "dateFormat": "YYYY:MM:DD hh:mm:ss",
+                "destinationType": "string",
+                "targetField": "Timestamp"
               }
             ],
             "fields": {}
           }
-        },
-        {
-          "id": "filterByValue",
-          "options": {
-            "filters": [
-              {
-                "config": {
-                  "id": "between",
-                  "options": {
-                    "from": 399,
-                    "to": 500
-                  }
-                },
-                "fieldName": "status"
-              }
-            ],
-            "match": "any",
-            "type": "include"
-          }
-        },
-        {
-          "id": "filterFieldsByName",
-          "options": {
-            "include": {
-              "names": [
-                "Error",
-                "endpoint",
-                "exception"
-              ]
-            }
-          }
-        },
-        {
-          "id": "groupBy",
-          "options": {
-            "fields": {
-              "Error": {
-                "aggregations": [
-                  "count"
-                ],
-                "operation": "aggregate"
-              },
-              "Exception": {
-                "aggregations": []
-              },
-              "endpoint": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "exception": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "gisamiguel@gmail.com user": {
-                "aggregations": []
-              },
-              "keyth.saborido@hivecloud.com.br user": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "message 1": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "message 2": {
-                "aggregations": []
-              },
-              "oggiggidetalhe@hotmail.com user": {
-                "aggregations": [
-                  "count"
-                ],
-                "operation": "aggregate"
-              },
-              "resource": {
-                "aggregations": [
-                  "count"
-                ],
-                "operation": "groupby"
-              },
-              "supercont@supercont.net.br user": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "tijuca user": {
-                "aggregations": []
-              },
-              "user": {
-                "aggregations": [],
-                "operation": "groupby"
-              }
-            }
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "desc": true,
-                "field": "Error (count)"
-              }
-            ]
-          }
         }
       ],
-      "type": "table"
+      "type": "marcusolsson-dynamictext-panel"
     },
     {
       "datasource": {
@@ -1647,6 +1484,275 @@
     },
     {
       "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false,
+            "minWidth": 50
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Error (count)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "resource"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 340
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "endpoint"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 313
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "exception"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 817
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "id": 24,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": false,
+          "fields": "",
+          "reducer": [
+            "count"
+          ],
+          "show": false
+        },
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 11,
+          "refId": "A"
+        }
+      ],
+      "title": "Erros por endpoint",
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "format": "json",
+            "replace": false,
+            "source": "Body"
+          }
+        },
+        {
+          "id": "extractFields",
+          "options": {
+            "format": "json",
+            "replace": false,
+            "source": "Request"
+          }
+        },
+        {
+          "id": "extractFields",
+          "options": {
+            "replace": false,
+            "source": "Error"
+          }
+        },
+        {
+          "id": "extractFields",
+          "options": {
+            "replace": false,
+            "source": "Exception"
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "destinationType": "number",
+                "targetField": "status"
+              }
+            ],
+            "fields": {}
+          }
+        },
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "config": {
+                  "id": "between",
+                  "options": {
+                    "from": 399,
+                    "to": 500
+                  }
+                },
+                "fieldName": "status"
+              }
+            ],
+            "match": "any",
+            "type": "include"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Error",
+                "endpoint",
+                "exception"
+              ]
+            }
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Error": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              },
+              "Exception": {
+                "aggregations": []
+              },
+              "endpoint": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "exception": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "gisamiguel@gmail.com user": {
+                "aggregations": []
+              },
+              "keyth.saborido@hivecloud.com.br user": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "message 1": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "message 2": {
+                "aggregations": []
+              },
+              "oggiggidetalhe@hotmail.com user": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              },
+              "resource": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "groupby"
+              },
+              "supercont@supercont.net.br user": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tijuca user": {
+                "aggregations": []
+              },
+              "user": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Error (count)"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
         "type": "grafana-clickhouse-datasource",
         "uid": "clickhouse-traces"
       },
@@ -1654,7 +1760,7 @@
         "h": 5,
         "w": 8,
         "x": 12,
-        "y": 17
+        "y": 23
       },
       "id": 25,
       "options": {
@@ -1854,7 +1960,7 @@
         "h": 5,
         "w": 4,
         "x": 20,
-        "y": 17
+        "y": 23
       },
       "id": 18,
       "options": {
@@ -1985,86 +2091,9 @@
         }
       ],
       "type": "table"
-    },
-    {
-      "datasource": {
-        "type": "grafana-clickhouse-datasource",
-        "uid": "clickhouse-traces"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 22
-      },
-      "id": 27,
-      "options": {
-        "content": "<tr><button onclick=\"sendData()\">Copiar cUrl</button></tr>\n<tr>{{{json @root.Request.method}}}</tr>\n<tr>{{{json @root.Error.error}}}</tr>\n<tr>{{{json @root.Error.status}}}</tr>",
-        "defaultContent": "The query didn't return any results.",
-        "editor": {
-          "format": "auto",
-          "height": 390,
-          "language": "html"
-        },
-        "editors": [
-          "helpers"
-        ],
-        "everyRow": true,
-        "helpers": "\r\n\r\nsendData = () => {\r\n  var body = JSON.parse(data.Body);\r\n  var queryString = body.Request.queryString != null ? \"?\" + body.Request.queryString : \"\";\r\n  var location = \"--location '\" + body.Request.url + queryString + \"' \\\\\\n\";\r\n  var headers = \"\";\r\n  Object.entries(body.Request.header).forEach(entry => {\r\n    headers += \"--header '\" + entry[0] + \":\" + entry[1] + \"'\\\\\\n\";\r\n  });\r\n  var dataRaw = \"--data-raw '\" + JSON.stringify(body.Request.body) + \"'\";\r\n  var cUrl = \"curl \" + location + headers + dataRaw;\r\n  navigator.clipboard.writeText(cUrl);\r\n  alert(\"Copiado para o clipboard\");\r\n\r\n\r\n  //console.log(body.Request);\r\n  // fetch(\"http://localhost:8081\" + body.Request.endpoint, {\r\n  //   method: body.Request.method,\r\n  //   headers: body.Request.header,\r\n  //   body: JSON.stringify(body.Request.body)\r\n  // })\r\n  //.then(response => response.json())\r\n  //.then(response => console.log(JSON.stringify(response)))\r\n}\r\n\r\n",
-        "styles": ""
-      },
-      "targets": [
-        {
-          "builderOptions": {
-            "fields": [
-              "Body"
-            ],
-            "filters": [
-              {
-                "condition": "AND",
-                "filterType": "custom",
-                "key": "Timestamp",
-                "operator": "WITH IN DASHBOARD TIME RANGE",
-                "restrictToFields": [
-                  {
-                    "label": "Timestamp",
-                    "name": "Timestamp",
-                    "picklistValues": [],
-                    "type": "DateTime64(9)"
-                  }
-                ],
-                "type": "datetime"
-              }
-            ],
-            "limit": 100,
-            "mode": "list",
-            "orderBy": [],
-            "table": "logs"
-          },
-          "datasource": {
-            "type": "grafana-clickhouse-datasource",
-            "uid": "clickhouse-traces"
-          },
-          "format": 2,
-          "queryType": "builder",
-          "rawSql": "SELECT Body FROM \"logs\" WHERE   ( Timestamp  >= $__fromTime AND Timestamp <= $__toTime ) LIMIT 100",
-          "refId": "A",
-          "selectedFormat": 2
-        }
-      ],
-      "title": "Panel Title",
-      "transformations": [
-        {
-          "id": "extractFields",
-          "options": {
-            "source": "Body"
-          }
-        }
-      ],
-      "type": "marcusolsson-dynamictext-panel"
     }
   ],
-  "refresh": "",
+  "refresh": false,
   "schemaVersion": 38,
   "style": "dark",
   "tags": [],
@@ -2072,7 +2101,7 @@
     "list": [
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "cte",
           "value": "cte"
         },
@@ -2097,13 +2126,13 @@
     ]
   },
   "time": {
-    "from": "now-2d",
-    "to": "now"
+    "from": "2023-05-16T14:43:17.688Z",
+    "to": "2023-05-16T20:43:17.688Z"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Rest Logs",
   "uid": "F6Ssk50Vy",
-  "version": 11,
+  "version": 9,
   "weekStart": ""
 }
