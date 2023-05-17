@@ -44,6 +44,7 @@ services:
      # - ./data/grafana:/var/lib/grafana
 
   opentelemetry-collector:
+    restart: on-failure
     image: otel/opentelemetry-collector-contrib:latest
     # container_name: otel
     command:
