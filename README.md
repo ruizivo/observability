@@ -23,4 +23,4 @@ install
 
 # Adicionar o javaagent
 
-    -javaagent:/opt/observability/opentelemetry-javaagent.jar -Dotel.service.name=accounts -Dotel.javaagent.configuration-file=/opt/observability/observability.properties
+    -javaagent:/opt/observability/opentelemetry-javaagent.jar -Dotel.service.name=accounts -Dotel.javaagent.configuration-file=/opt/observability/opentelemetry.properties

@@ -25,6 +25,7 @@ services:
       # - ./configs/init-db.sql/:/docker-entrypoint-initdb.d/init-db.sql
       
   grafana:
+    restart: on-failure
     image: grafana/grafana:latest
     volumes:
       # - ./configs/grafana/grafana.ini:/etc/grafana/grafana.ini
@@ -69,6 +70,7 @@ services:
 
 
   prometheus:
+    restart: on-failure
     image: prom/prometheus:latest
     # container_name: prometheus
     command:
