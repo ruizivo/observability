@@ -12,7 +12,7 @@ receivers:
 processors:
   batch:
     send_batch_size: 100000
-    timeout: 5s
+    timeout: 10s
   memory_limiter:
     check_interval: 2s
     limit_mib: 1800

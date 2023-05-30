@@ -11,6 +11,8 @@ services:
       - "8123:8123"
     networks:
       - monit
+    # environment:
+      # CLICKHOUSE_DB: default
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
       interval: 30s
