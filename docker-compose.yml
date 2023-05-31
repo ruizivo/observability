@@ -3,29 +3,32 @@ version: '3.8'
 networks:
   monit:
 
-services:      
+services:
   clickhouse:
     image: clickhouse/clickhouse-server:latest
-    ports:
-      - "9000:9000"
-      - "8123:8123"
-    networks:
-      - monit
-    # environment:
-      # CLICKHOUSE_DB: default
+    restart: on-failure
+    environment:
+      CLICKHOUSE_DB: uptrace
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    # volumes:
+      test: ['CMD', 'wget', '--spider', '-q', 'localhost:8123/ping']
+      interval: 1s
+      timeout: 1s
+      retries: 30
+    volumes:
+      - ch_data7:/var/lib/clickhouse
       # - ./configs/clickhouse/clickhouse-config.xml:/etc/clickhouse-server/config.xml
       # - ./configs/clickhouse/clickhouse-users.xml:/etc/clickhouse-server/users.xml
       # - ./configs/clickhouse/clickhouse-cluster.xml:/etc/clickhouse-server/config.d/cluster.xml
       # - ./configs/clickhouse/clickhouse-storage.xml:/etc/clickhouse-server/config.d/storage.xml
       # - ./data/clickhouse/:/var/lib/clickhouse/
       # - ./configs/init-db.sql/:/docker-entrypoint-initdb.d/init-db.sql
-      
+    ports:
+      - '8123:8123'
+      - '9000:9000'      
+    networks:
+      - monit
+
+
   grafana:
     restart: on-failure
     image: grafana/grafana:latest
@@ -46,52 +49,75 @@ services:
     # volumes:
      # - ./data/grafana:/var/lib/grafana
 
-  opentelemetry-collector:
-    restart: on-failure
+  otelcol:
     image: otel/opentelemetry-collector-contrib:latest
-    # container_name: otel
-    command:
-      - "--config=/etc/otel-collector-config.yaml"
-      - "--set=service.telemetry.logs.level=INFO"
+    restart: on-failure
+    user: '0:0' # required for logs
     volumes:
-      - ./configs/opentelemetry/config-otel.yaml:/etc/otel-collector-config.yaml
+      - ./configs/uptrace/otel-collector.yaml:/etc/otelcol-contrib/config.yaml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/log:/var/log:ro
     ports:
-      - "4317:4317"   # otlp receiver
-      - "1888:1888"   # pprof extension
-      - "13133:13133" # health_check extension
-      - "55679:55679" # zpages extension
-      - "24224:24224" # fluentforwarder
-      - "24224:24224/udp" # fluentforwarder
-      - "9464"          # Prometheus exporter
-      - "8888"          # metrics endpoint
+      - '4317:4317'
+      - '4318:4318'
     depends_on:
       clickhouse:
         condition: service_healthy
     networks:
       - monit
 
-
-  prometheus:
+  uptrace:
+    image: 'uptrace/uptrace:1.4.8'
+    #image: 'uptrace/uptrace-dev:latest'
     restart: on-failure
-    image: prom/prometheus:latest
-    # container_name: prometheus
-    command:
-      - --web.console.templates=/etc/prometheus/consoles
-      - --web.console.libraries=/etc/prometheus/console_libraries
-      - --storage.tsdb.retention.time=1h
-      - --config.file=/etc/prometheus/prometheus-config.yaml
-      # - --storage.tsdb.path=/prometheus
-      - --web.enable-lifecycle
-      # - --web.route-prefix=/
-      # - --enable-feature=exemplar-storage
     volumes:
-     - ./configs/prometheus/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
-     - ./data/prometheus:/prometheus
-    deploy:
-      resources:
-        limits:
-          memory: 300M
+      - ./configs/uptrace/uptrace.yml:/etc/uptrace/uptrace.yml
+    #environment:
+    #  - DEBUG=2
     ports:
-      - "9090:9090"
+      - '14317:14317'
+      - '14318:14318'
     networks:
       - monit
+      
+  postgres:
+    image: postgres:15-alpine
+    restart: on-failure
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_USER: uptrace
+      POSTGRES_PASSWORD: uptrace
+      POSTGRES_DB: uptrace
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready']
+      interval: 1s
+      timeout: 1s
+      retries: 30
+    volumes:
+      - 'pg_data4:/var/lib/postgresql/data/pgdata'
+    ports:
+      - '5432:5432'
+    networks:
+      - monit
+      
+      
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    restart: on-failure
+    ports:
+      - '8025:8025'
+    networks:
+      - monit
+
+  vector:
+    image: timberio/vector:0.28.X-alpine
+    volumes:
+      - ./configs/uptrace/vector.toml:/etc/vector/vector.toml:ro
+    networks:
+      - monit
+
+
+
+volumes:
+  ch_data7:
+  pg_data4:
