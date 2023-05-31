@@ -15,7 +15,7 @@ services:
       timeout: 1s
       retries: 30
     volumes:
-      - ch_data7:/var/lib/clickhouse
+      - clickhouse_vol:/var/lib/clickhouse
       # - ./configs/clickhouse/clickhouse-config.xml:/etc/clickhouse-server/config.xml
       # - ./configs/clickhouse/clickhouse-users.xml:/etc/clickhouse-server/users.xml
       # - ./configs/clickhouse/clickhouse-cluster.xml:/etc/clickhouse-server/config.d/cluster.xml
@@ -94,7 +94,7 @@ services:
       timeout: 1s
       retries: 30
     volumes:
-      - 'pg_data4:/var/lib/postgresql/data/pgdata'
+      - 'postgres_vol:/var/lib/postgresql/data/pgdata'
     ports:
       - '5432:5432'
     networks:
@@ -119,5 +119,5 @@ services:
 
 
 volumes:
-  ch_data7:
-  pg_data4:
+  clickhouse_vol:
+  postgres_vol:
