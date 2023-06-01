@@ -12,11 +12,11 @@ receivers:
 processors:
   batch:
     send_batch_size: 100000
-    timeout: 5s
+    timeout: 10s
   memory_limiter:
     check_interval: 2s
-    limit_mib: 1800
-    spike_limit_mib: 500
+    limit_mib: 2000
+    spike_limit_mib: 1000
   resourcedetection/system:
     detectors: [ "system" ]
     system:
