@@ -18,7 +18,8 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-    # volumes:
+    volumes:
+      - clickhouse_vol:/var/lib/clickhouse
       # - ./configs/clickhouse/clickhouse-config.xml:/etc/clickhouse-server/config.xml
       # - ./configs/clickhouse/clickhouse-users.xml:/etc/clickhouse-server/users.xml
       # - ./configs/clickhouse/clickhouse-cluster.xml:/etc/clickhouse-server/config.d/cluster.xml
@@ -43,8 +44,7 @@ services:
       - clickhouse
     networks:
       - monit
-    volumes:
-      - clickhouse_vol:/var/lib/clickhouse
+    # volumes:
      # - ./data/grafana:/var/lib/grafana
 
   opentelemetry-collector:
@@ -96,6 +96,6 @@ services:
       - "9090:9090"
     networks:
       - monit
-
+      
 volumes:
   clickhouse_vol:
