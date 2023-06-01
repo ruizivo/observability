@@ -43,7 +43,8 @@ services:
       - clickhouse
     networks:
       - monit
-    # volumes:
+    volumes:
+      - clickhouse_vol:/var/lib/clickhouse
      # - ./data/grafana:/var/lib/grafana
 
   opentelemetry-collector:
@@ -95,3 +96,6 @@ services:
       - "9090:9090"
     networks:
       - monit
+
+volumes:
+  clickhouse_vol:
