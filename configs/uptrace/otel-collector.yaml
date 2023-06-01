@@ -39,27 +39,55 @@ receivers:
           scrape_interval: 10s
           static_configs:
             - targets: ['0.0.0.0:8888']
+  otlp/spanmetrics:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:12346
 
 processors:
   resourcedetection:
     detectors: ['system']
   batch:
-    send_batch_size: 10000
-    timeout: 10s
+    send_batch_size: 100000
+    timeout: 5s
+  spanmetrics:
+    metrics_exporter: prometheus
+  transform:
+    metric_statements:
+      - context: metric
+        statements:
+          - set(description, "Measures the duration of inbound HTTP requests") where name == "http.server.duration"
+
+connectors:
+  spanmetrics:
+    # namespace: mas-assist
+    histogram:
+      unit: s
+      explicit:
+        buckets: [10ms, 100ms, 200ms, 400ms, 800ms, 1s, 1200ms, 1400ms, 1600ms, 1800ms, 2s, 5s, 7s]
+    dimensions:
+      - name: http.method
+      - name: http.status_code
+      - name: http.target
+      - name: http.url
+      - name: http.route
 
 exporters:
   otlp/uptrace:
     endpoint: uptrace:14317
     tls: { insecure: true }
     headers: { 'uptrace-dsn': 'http://hivecloud@observability.hivecloud.com.br:14317/2' }
+
   clickhouse:
     endpoint: tcp://clickhouse:9000?dial_timeout=10s&compress=lz4
     database: default
     logs_table_name: logs
+    traces_table_name: traces
+    metrics_table_name: metrics
     ttl_days: 3
     timeout: 10s
-    sending_queue:
-      queue_size: 100
+    # sending_queue:
+      # queue_size: 1000
     retry_on_failure:
       enabled: true
       initial_interval: 5s
@@ -76,15 +104,15 @@ service:
     traces:
       receivers: [otlp, jaeger]
       processors: [batch]
-      exporters: [otlp/uptrace]
+      exporters: [spanmetrics, otlp/uptrace,clickhouse]
     metrics:
-      receivers: [otlp]
+      receivers: [otlp,otlp/spanmetrics, spanmetrics]
       processors: [batch]
-      exporters: [otlp/uptrace]
+      exporters: [otlp/uptrace,clickhouse]
     metrics/hostmetrics:
       receivers: [hostmetrics, postgresql, prometheus/otelcol]
       processors: [batch, resourcedetection]
-      exporters: [otlp/uptrace]
+      exporters: [otlp/uptrace,clickhouse]
     logs:
       receivers: [otlp]
       processors: [batch]
