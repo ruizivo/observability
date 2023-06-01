@@ -12,7 +12,7 @@ receivers:
 processors:
   batch:
     send_batch_size: 100000
-    timeout: 10s
+    timeout: 5s
   memory_limiter:
     check_interval: 2s
     limit_mib: 1800
@@ -57,8 +57,8 @@ exporters:
     metrics_table_name: metrics
     ttl_days: 3
     timeout: 10s
-    sending_queue:
-      queue_size: 100
+    # sending_queue:
+      # queue_size: 100
     retry_on_failure:
       enabled: true
       initial_interval: 5s
